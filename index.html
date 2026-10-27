@@ -119,6 +119,15 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 .bl{font-size:1rem;letter-spacing:.3rem;color:#55dfff;height:1.7rem;opacity:0;-webkit-transition:opacity .4s;transition:opacity .4s}
 .on{opacity:1}
 #greet{font-size:4.6rem;letter-spacing:.6rem;color:#e6ffff;text-shadow:0 0 30px #00bfff,0 0 60px #0090d0;opacity:0;-webkit-transition:opacity 1.2s;transition:opacity 1.2s;margin-top:1.5rem}
+.hint{font-size:.6rem;color:#3f9fbf;letter-spacing:.15rem;margin-right:1rem}
+.abtn{font-size:.7rem;border:1px solid #2fe3ff;padding:.2rem .7rem;margin-right:1rem;color:#7df6ff;letter-spacing:.2rem}
+#apps{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,7,17,.94);z-index:90;display:none;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+#apps.show{display:-webkit-flex;display:flex}
+.aph{font-size:1.2rem;letter-spacing:.5rem;color:#7df6ff;margin-bottom:2rem}
+#atiles{width:48rem;text-align:center}
+.at{display:inline-block;width:14rem;height:6rem;line-height:6rem;margin:.7rem;border:1px solid rgba(34,190,255,.4);background:rgba(3,20,36,.8);font-size:1.1rem;letter-spacing:.2rem;color:#bcefff}
+.at.sel{border-color:#7df6ff;background:rgba(10,70,100,.8);box-shadow:0 0 25px #00aaff;color:#fff}
+.ahint{margin-top:2rem;font-size:.7rem;letter-spacing:.2rem;color:#3f9fbf}
 </style>
 </head>
 <body>
@@ -128,7 +137,7 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 <div id="scan"></div>
 <div class="cn c1"></div><div class="cn c2"></div><div class="cn c3"></div><div class="cn c4"></div>
 
-<div class="top"><div class="ttl">J.A.R.V.I.S <span class="small">// SISTEMA DE ASSISTÊNCIA</span></div><div class="status"><span class="dot"></span>ONLINE</div></div>
+<div class="top"><div class="ttl">J.A.R.V.I.S <span class="small">// SISTEMA DE ASSISTÊNCIA</span></div><div class="status"><span class="hint">BOTÃO AMARELO = APPS</span><span id="appsbtn" class="abtn">APPS</span><span class="dot"></span>ONLINE</div></div>
 
 <div class="col cl">
   <div class="panel">
@@ -202,6 +211,12 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 
 <div class="ticker"><div class="tk" id="tk">AGUARDANDO MANCHETES...</div></div>
 
+<div id="apps">
+  <div class="aph">APLICATIVOS</div>
+  <div id="atiles"></div>
+  <div class="ahint">SETAS + OK PARA ABRIR  //  VOLTAR PARA FECHAR</div>
+</div>
+
 <div id="boot">
   <div class="bring">
     <div style="top:0;left:0;right:0;bottom:0;border:1px solid rgba(32,200,255,.7)"></div>
@@ -216,16 +231,21 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 </div>
 
 <audio id="music" preload="auto"></audio>
+<audio id="voice" preload="none"></audio>
 
 <script>
 /* ===== CONFIGURACAO: mude aqui ===== */
 var CONFIG = {
-  city: 'SÃO PAULO',
-  lat: -23.55,
-  lon: -46.63,
+  city: 'IMBITUBA',
+  cityName: 'Imbituba',
+  lat: -28.24,
+  lon: -48.67,
+  tzOffsetMin: -180,           // horario de Brasilia (UTC-3)
+  briefing: true,              // apos a saudacao, fala o clima e o dolar
   greeting: 'auto',            // 'auto' = bom dia/boa tarde/boa noite; ou um texto fixo, ex: 'BOM DIA, SENHOR'
   music: 'back_in_black.mp3.mp3',  // arquivo de audio na mesma pasta do HTML
   volume: 0.6,
+  voice: true,                 // JARVIS fala as respostas e a saudacao pela TV
   topic: '',                   // nome secreto do canal com o celular (vamos preencher no passo da IA)
   feeds: [
     {name: 'G1 MUNDO', url: 'https://g1.globo.com/rss/g1/mundo/'},
@@ -273,14 +293,30 @@ function setSt(id, ok){ $(id).textContent = ok ? 'OK' : 'SEM SINAL'; $(id).style
 /* ===== relogio ===== */
 var DAYS = ['DOMINGO','SEGUNDA','TERÇA','QUARTA','QUINTA','SEXTA','SÁBADO'];
 var MONTHS = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+var timeOffsetMs = 0;
+function nowBR(){
+  var b = new Date(Date.now() + timeOffsetMs + CONFIG.tzOffsetMin * 60000);
+  return {h: b.getUTCHours(), m: b.getUTCMinutes(), s: b.getUTCSeconds(), dow: b.getUTCDay(), day: b.getUTCDate(), mon: b.getUTCMonth()};
+}
+function syncTime(){
+  getJSON('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', function(j){
+    if (j && j.unixtime) timeOffsetMs = j.unixtime * 1000 - Date.now();
+  }, function(){
+    getJSON('https://timeapi.io/api/Time/current/zone?timeZone=America/Sao_Paulo', function(j){
+      if (j && j.year) timeOffsetMs = Date.UTC(j.year, j.month - 1, j.day, j.hour, j.minute, j.seconds) - CONFIG.tzOffsetMin * 60000 - Date.now();
+    });
+  });
+}
 function updateClock(){
-  var d = new Date();
-  $('time').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
-  $('sec').textContent = pad(d.getSeconds());
-  $('date').textContent = DAYS[d.getDay()] + ' // ' + pad(d.getDate()) + ' ' + MONTHS[d.getMonth()];
+  var n = nowBR();
+  $('time').textContent = pad(n.h) + ':' + pad(n.m);
+  $('sec').textContent = pad(n.s);
+  $('date').textContent = DAYS[n.dow] + ' // ' + pad(n.day) + ' ' + MONTHS[n.mon];
 }
 updateClock(); setInterval(updateClock, 1000);
+syncTime(); setInterval(syncTime, 30 * 60 * 1000);
 
+var lastWx = null, lastFx = {};
 /* ===== clima (Open-Meteo, sem chave) ===== */
 function wxText(c){
   if (c === 0) return 'CÉU LIMPO';
@@ -307,6 +343,7 @@ function loadWeather(){
   getJSON(url, function(j){
     try {
       var c = j.current;
+      lastWx = {t: Math.round(c.temperature_2m), c: wxText(c.weather_code), f: Math.round(c.apparent_temperature), mx: Math.round(j.daily.temperature_2m_max[0]), mn: Math.round(j.daily.temperature_2m_min[0])};
       $('temp').innerHTML = Math.round(c.temperature_2m) + '&deg;C';
       $('cond').textContent = wxText(c.weather_code);
       $('feel').innerHTML = Math.round(c.apparent_temperature) + '&deg;C';
@@ -328,6 +365,7 @@ function loadFinance(){
       if (!o) continue;
       any = true;
       var v = parseFloat(o.bid), p = parseFloat(o.pctChange);
+      lastFx[k] = v;
       $('v-' + k).textContent = 'R$ ' + fmt(v, v > 1000 ? 0 : 2);
       var pe = $('p-' + k);
       pe.textContent = (p >= 0 ? '+' : '') + p.toFixed(2).replace('.', ',') + '%';
@@ -376,19 +414,51 @@ function showNews(){
     box.style.opacity = 1;
   }, 400);
 }
+function getText(url, ok, fail){
+  var x = new XMLHttpRequest();
+  x.open('GET', url, true);
+  x.timeout = 15000;
+  x.onload = function(){ if (x.status >= 200 && x.status < 300) ok(x.responseText); else if (fail) fail(); };
+  x.onerror = function(){ if (fail) fail(); };
+  x.ontimeout = function(){ if (fail) fail(); };
+  x.send();
+}
+function parseRss(xml, name){
+  var arr = [];
+  try {
+    var doc = (new DOMParser()).parseFromString(xml, 'text/xml');
+    var items = doc.getElementsByTagName('item');
+    for (var i = 0; i < items.length && i < 10; i++){
+      var t = items[i].getElementsByTagName('title')[0];
+      if (t) arr.push({src: name, title: clean(t.textContent)});
+    }
+  } catch (e) {}
+  return arr;
+}
+var PROXIES = [
+  function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
+  function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
+];
+function fetchFeed(fd, cb){
+  function viaProxy(i){
+    if (i >= PROXIES.length){ cb([]); return; }
+    getText(PROXIES[i](fd.url), function(t){
+      var a = parseRss(t, fd.name);
+      if (a.length) cb(a); else viaProxy(i + 1);
+    }, function(){ viaProxy(i + 1); });
+  }
+  getJSON('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(fd.url), function(j){
+    var arr = [];
+    if (j && j.items){
+      for (var i = 0; i < j.items.length && i < 10; i++){ arr.push({src: fd.name, title: clean(j.items[i].title)}); }
+    }
+    if (arr.length) cb(arr); else viaProxy(0);
+  }, function(){ viaProxy(0); });
+}
 function loadNews(){
-  var done = 0;
   for (var n = 0; n < CONFIG.feeds.length; n++){
     (function(idx){
-      var fd = CONFIG.feeds[idx];
-      getJSON('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(fd.url), function(j){
-        var arr = [];
-        if (j && j.items){
-          for (var i = 0; i < j.items.length && i < 10; i++){ arr.push({src: fd.name, title: clean(j.items[i].title)}); }
-        }
-        feedItems[idx] = arr;
-        done++; finishNews();
-      }, function(){ done++; finishNews(); });
+      fetchFeed(CONFIG.feeds[idx], function(arr){ feedItems[idx] = arr; finishNews(); });
     })(n);
   }
 }
@@ -420,32 +490,66 @@ function toggleMusic(e){
   if (!musicWanted) return;
   if (audio.paused){ try { audio.play(); } catch (x) {} } else { audio.pause(); }
 }
-document.addEventListener('keydown', toggleMusic);
-document.addEventListener('click', toggleMusic);
 setAudio('AGUARDANDO', true);
 
 /* ===== abertura ===== */
 function greetingText(){
   if (CONFIG.greeting !== 'auto') return CONFIG.greeting;
-  var h = new Date().getHours();
+  var h = nowBR().h;
   if (h >= 5 && h < 12) return 'BOM DIA, SENHOR';
   if (h >= 12 && h < 18) return 'BOA TARDE, SENHOR';
   return 'BOA NOITE, SENHOR';
 }
-function speak(t){
+var voice = $('voice'), vq = [], vdone = null, savedVol = null;
+function duck(){ try { if (!audio.paused && savedVol === null){ savedVol = audio.volume; audio.volume = Math.min(savedVol, 0.15); } } catch (e) {} }
+function unduck(){ try { if (savedVol !== null){ audio.volume = savedVol; savedVol = null; } } catch (e) {} }
+function chunkText(text){
+  var parts = String(text).match(/[^.!?]+[.!?]*/g) || [String(text)], out = [], cur = '';
+  for (var i = 0; i < parts.length; i++){
+    var p = parts[i].replace(/^\s+|\s+$/g, '');
+    while (p.length > 180){ out.push(p.substring(0, 180)); p = p.substring(180); }
+    if ((cur + ' ' + p).length > 180){ if (cur) out.push(cur); cur = p; } else { cur = cur ? cur + ' ' + p : p; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function finishVoice(){
+  vq = []; unduck();
+  if (vdone){ var d = vdone; vdone = null; d(); }
+}
+function playNext(){
+  if (!vq.length){ finishVoice(); return; }
+  duck();
+  voice.src = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=' + encodeURIComponent(vq.shift());
+  try { voice.play(); } catch (e) { finishVoice(); }
+}
+voice.addEventListener('ended', playNext);
+voice.addEventListener('error', function(){ fallbackSpeak(); });
+var lastSpoken = '';
+function fallbackSpeak(){
+  var t = lastSpoken;
   try {
-    if (window.speechSynthesis && window.SpeechSynthesisUtterance){
+    if (window.speechSynthesis && window.SpeechSynthesisUtterance && t){
       var u = new SpeechSynthesisUtterance(t.toLowerCase());
       u.lang = 'pt-BR';
       window.speechSynthesis.speak(u);
     }
   } catch (e) {}
+  finishVoice();
+}
+function speak(t, done){
+  lastSpoken = String(t);
+  vdone = done || null;
+  vq = chunkText(t);
+  playNext();
 }
 function show(id, delay){ setTimeout(function(){ $(id).className += ' on'; }, delay); }
 var gt = greetingText();
 $('greet').textContent = gt;
 show('b1', 300); show('b2', 1100); show('b3', 1900);
-setTimeout(function(){ $('greet').style.opacity = 1; speak(gt); startMusic(); }, 2900);
+var musicKicked = false;
+function kickMusic(){ if (musicKicked) return; musicKicked = true; startMusic(); }
+setTimeout(function(){ $('greet').style.opacity = 1; if (CONFIG.voice){ speak(gt, function(){ if (CONFIG.briefing && lastWx){ speak(briefingText(), kickMusic); } else { kickMusic(); } }); setTimeout(kickMusic, 18000); } else { kickMusic(); } }, 2900);
 setTimeout(function(){ $('boot').style.opacity = 0; }, 7500);
 setTimeout(function(){ $('boot').style.display = 'none'; }, 8700);
 
@@ -471,6 +575,87 @@ function typeAnswer(text){
     if (i >= text.length){ clearInterval(tw); tw = null; setChatState('idle'); }
   }, 28);
 }
+function weatherSpeech(){
+  if (!lastWx) return 'Ainda não consegui os dados do clima, senhor.';
+  return 'Em ' + CONFIG.cityName + ' faz ' + lastWx.t + ' graus. Condição atual: ' + lastWx.c.toLowerCase() + '. A sensação é de ' + lastWx.f + ' graus, com máxima de ' + lastWx.mx + ' e mínima de ' + lastWx.mn + ' graus hoje.';
+}
+function financeSpeech(){
+  var p = [];
+  if (lastFx.USDBRL) p.push('o dólar está em ' + fmt(lastFx.USDBRL, 2) + ' reais');
+  if (lastFx.EURBRL) p.push('o euro em ' + fmt(lastFx.EURBRL, 2));
+  if (lastFx.BTCBRL) p.push('e o bitcoin em ' + Math.round(lastFx.BTCBRL / 1000) + ' mil reais');
+  if (!p.length) return 'Ainda não consegui as cotações, senhor.';
+  var t = p.join(', ');
+  return t.charAt(0).toUpperCase() + t.substring(1) + '.';
+}
+function newsSpeech(){
+  if (!pool.length) return 'Ainda não carreguei as manchetes, senhor.';
+  var t = 'Estas são as principais manchetes, senhor. ';
+  for (var i = 0; i < 3 && i < pool.length; i++){
+    var h = pool[i].title.replace(/[.!?]+$/, '');
+    t += (i + 1) + '. ' + h + '. ';
+  }
+  return t;
+}
+function briefingText(){
+  var t = 'Em ' + CONFIG.cityName + ', faz ' + lastWx.t + ' graus, ' + lastWx.c.toLowerCase() + '.';
+  if (lastFx.USDBRL) t += ' O dólar está em ' + fmt(lastFx.USDBRL, 2) + ' reais.';
+  return t;
+}
+
+/* ===== aplicativos ===== */
+var APPS = [
+  {k: 'youtube', n: 'YOUTUBE', u: 'https://www.youtube.com/tv'},
+  {k: 'spotify', n: 'SPOTIFY', u: 'https://open.spotify.com'},
+  {k: 'netflix', n: 'NETFLIX', u: 'https://www.netflix.com'},
+  {k: 'globoplay', n: 'GLOBOPLAY', u: 'https://globoplay.globo.com'},
+  {k: 'google', n: 'GOOGLE', u: 'https://www.google.com'},
+  {k: 'g1', n: 'G1', u: 'https://g1.globo.com'}
+];
+var appsOpen = false, appSel = 0;
+function renderApps(){
+  for (var i = 0; i < APPS.length; i++){ $('at' + i).className = 'at' + (i === appSel ? ' sel' : ''); }
+}
+(function(){
+  var h = '';
+  for (var i = 0; i < APPS.length; i++){ h += '<div class="at" id="at' + i + '">' + APPS[i].n + '</div>'; }
+  $('atiles').innerHTML = h;
+  for (var j = 0; j < APPS.length; j++){
+    $('at' + j).onclick = (function(k){ return function(){ openApp(APPS[k].k); }; })(j);
+  }
+})();
+function showApps(){ appsOpen = true; appSel = 0; $('apps').className = 'show'; renderApps(); }
+function hideApps(){ appsOpen = false; $('apps').className = ''; }
+$('appsbtn').onclick = showApps;
+function openApp(key){
+  var a = null;
+  for (var i = 0; i < APPS.length; i++){ if (APPS[i].k === key) a = APPS[i]; }
+  if (!a) return false;
+  hideApps();
+  $('cq').textContent = 'COMANDO > ABRIR ' + a.n;
+  typeAnswer('ABRINDO ' + a.n + ', SENHOR. PARA VOLTAR, USE O BOTÃO VOLTAR DO CONTROLE.');
+  setTimeout(function(){ window.location.href = a.u; }, 1800);
+  return true;
+}
+function appsKey(k){
+  var n = APPS.length;
+  if (k === 37) appSel = Math.max(0, appSel - 1);
+  else if (k === 39) appSel = Math.min(n - 1, appSel + 1);
+  else if (k === 38) appSel = Math.max(0, appSel - 3);
+  else if (k === 40) appSel = Math.min(n - 1, appSel + 3);
+  else if (k === 13){ openApp(APPS[appSel].k); return; }
+  else if (k === 461 || k === 27 || k === 8){ hideApps(); return; }
+  renderApps();
+}
+function inApps(el){ while (el){ if (el.id === 'apps' || el.id === 'appsbtn') return true; el = el.parentNode; } return false; }
+document.addEventListener('keydown', function(e){
+  var k = e.keyCode;
+  if (appsOpen){ appsKey(k); e.preventDefault(); return; }
+  if (k === 405){ showApps(); return; }
+  toggleMusic(e);
+});
+document.addEventListener('click', function(e){ if (inApps(e.target)) return; toggleMusic(e); });
+
 function handleRelay(raw){
   var o;
   try { o = JSON.parse(raw); } catch (e) { return; }
@@ -478,14 +663,24 @@ function handleRelay(raw){
   else if (o.t === 'chat'){
     $('cq').textContent = 'VOCÊ > ' + String(o.q).substring(0, 120);
     typeAnswer(String(o.a));
+    if (CONFIG.voice) speak(String(o.a));
   }
   else if (o.t === 'cmd'){
+    var shown = String(o.a || 'COMANDO EXECUTADO, SENHOR.'), spoken = shown;
     if (o.cmd === 'pause'){ audio.pause(); }
     else if (o.cmd === 'play'){ musicWanted = true; try { audio.play(); } catch (e1) {} }
     else if (o.cmd === 'volup'){ try { audio.volume = Math.min(1, audio.volume + 0.15); } catch (e2) {} }
     else if (o.cmd === 'voldown'){ try { audio.volume = Math.max(0, audio.volume - 0.15); } catch (e3) {} }
+    else if (o.cmd === 'weather'){ shown = spoken = weatherSpeech(); }
+    else if (o.cmd === 'finance'){ shown = spoken = financeSpeech(); }
+    else if (o.cmd === 'news'){ spoken = newsSpeech(); shown = pool.length ? 'LENDO AS MANCHETES, SENHOR.' : spoken; }
+    else if (o.cmd === 'open'){
+      if (openApp(o.app)) return;
+      shown = spoken = 'Não conheço esse aplicativo, senhor.';
+    }
     $('cq').textContent = 'COMANDO > ' + String(o.q || o.cmd).substring(0, 100);
-    typeAnswer(String(o.a || 'COMANDO EXECUTADO, SENHOR.'));
+    typeAnswer(shown);
+    if (CONFIG.voice) speak(spoken);
   }
 }
 function pollRelay(){

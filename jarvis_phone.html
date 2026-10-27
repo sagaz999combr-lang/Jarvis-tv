@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JARVIS // Controle</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#020711;color:#bcefff;font-family:-apple-system,Helvetica,Arial,sans-serif}
+body{background:radial-gradient(ellipse at 50% 30%,#08233a 0%,#04111f 40%,#020711 80%);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+h1{font-size:15px;letter-spacing:6px;text-align:center;margin:18px 0 4px;color:#e6ffff;text-shadow:0 0 14px #00bfff}
+#state{text-align:center;font-size:11px;letter-spacing:3px;color:#55dfff;height:16px}
+#log{flex:1;overflow-y:auto;margin:14px 0;padding:4px}
+.m{margin:10px 0;padding:10px 12px;border:1px solid rgba(34,190,255,.3);background:rgba(3,20,36,.6);font-size:15px;line-height:1.4}
+.m small{display:block;font-size:10px;letter-spacing:3px;color:#2fa6c8;margin-bottom:4px}
+.m.you{border-color:rgba(120,120,255,.3)}
+.m.err{border-color:#ff5a6e;color:#ffb3bd}
+#mic{position:relative;width:96px;height:96px;margin:6px auto 14px;border-radius:50%;border:2px solid #2fe3ff;background:radial-gradient(circle,#0b4c70,#04111f);box-shadow:0 0 30px rgba(0,190,255,.5);color:#e6ffff;font-size:13px;letter-spacing:2px}
+#mic.on{background:radial-gradient(circle,#18a6d8,#05304a);animation:p 1s infinite}
+@keyframes p{50%{box-shadow:0 0 60px rgba(0,230,255,.9)}}
+.row{display:flex;gap:8px;margin-bottom:10px}
+input[type=text],input[type=password]{flex:1;min-width:0;background:#04111f;border:1px solid #14628a;color:#e6ffff;padding:12px;font-size:16px;border-radius:0}
+button.s{background:#0b4c70;color:#e6ffff;border:1px solid #2fe3ff;padding:0 16px;font-size:13px;letter-spacing:2px}
+.opts{display:flex;justify-content:space-between;font-size:12px;color:#64a9c4;margin-bottom:12px}
+.opts a{color:#55dfff;text-decoration:underline}
+#setup{display:none;margin-bottom:12px}
+</style>
+</head>
+<body>
+<h1>J.A.R.V.I.S</h1>
+<div id="state">PRONTO</div>
+<div id="log"></div>
+
+<div id="setup">
+  <div class="m"><small>SENHA DO JARVIS</small>Digite a senha que você criou no Cloudflare. Ela fica salva só neste celular.</div>
+  <div class="row"><input type="password" id="tok" placeholder="senha"><button class="s" id="savetok">SALVAR</button></div>
+</div>
+
+<button id="mic">FALAR</button>
+<div class="row"><input type="text" id="txt" placeholder="ou digite aqui..."><button class="s" id="send">ENVIAR</button></div>
+<div class="opts"><label><input type="checkbox" id="tts"> voz do celular</label><a id="reset">trocar senha</a></div>
+
+<script>
+/* ===== CONFIGURACAO ===== */
+var WORKER_URL = '';   // endereço do seu Worker do Cloudflare (preenchemos no passo da IA)
+var TOPIC = '';        // o mesmo nome secreto que está no HTML da TV
+
+var $ = function(id){ return document.getElementById(id); };
+var convo = [];
+var token = localStorage.getItem('jarvis_token') || '';
+
+function setState(t){ $('state').textContent = t; }
+function add(kind, who, text){
+  var d = document.createElement('div');
+  d.className = 'm ' + kind;
+  var s = document.createElement('small'); s.textContent = who;
+  d.appendChild(s); d.appendChild(document.createTextNode(text));
+  $('log').appendChild(d);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function publish(obj){
+  if (!TOPIC) return Promise.resolve();
+  return fetch('https://ntfy.sh/' + TOPIC, {method: 'POST', body: JSON.stringify(obj)}).catch(function(){});
+}
+function say(t){
+  if (!$('tts').checked || !window.speechSynthesis) return;
+  try {
+    var u = new SpeechSynthesisUtterance(t);
+    u.lang = 'pt-BR';
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function norm(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function localCommand(text){
+  var t = norm(text), short = t.split(/\s+/).length <= 8;
+  var m = t.match(/(abre|abrir|abra|entra|entrar|coloca|colocar|liga|ligar|vai para|ir para).*(youtube|spotify|netflix|globoplay|globo play|google|g1)/);
+  if (m){
+    var key = m[2].replace(' ', '');
+    var names = {youtube: 'YouTube', spotify: 'Spotify', netflix: 'Netflix', globoplay: 'Globoplay', google: 'Google', g1: 'G1'};
+    return {id: 'open', app: key, reply: 'Abrindo o ' + names[key] + ', senhor.'};
+  }
+  if (short && /(clima|temperatura|previsao|vai chover|esta chovendo|como esta o tempo|tempo hoje|tempo agora)/.test(t)) return {id: 'weather', reply: 'Consultando o clima, senhor.'};
+  if (short && /(noticia|manchete)/.test(t)) return {id: 'news', reply: 'Certo, senhor.'};
+  if (short && /(dolar|euro|bitcoin|ethereum|cotacao)/.test(t)) return {id: 'finance', reply: 'Consultando o mercado, senhor.'};
+  if (/(pausa|pausar|pare|parar|desliga|silencia).*(musica|som)|^pausa/.test(t)) return {id: 'pause', reply: 'Música pausada, senhor.'};
+  if (/(toca|tocar|toque|coloca|volta|continua|continuar|retoma|liga).*(musica|som)|^(toca|play)/.test(t)) return {id: 'play', reply: 'Retomando a música, senhor.'};
+  if (/(aumenta|aumentar|sobe|subir|mais alto).*(volume|som)|volume.*(mais|aumenta|sobe)/.test(t)) return {id: 'volup', reply: 'Aumentando o volume, senhor.'};
+  if (/(abaixa|abaixar|diminui|diminuir|baixa|baixar).*(volume|som)|volume.*(menos|abaixa|diminui|baixa)/.test(t)) return {id: 'voldown', reply: 'Reduzindo o volume, senhor.'};
+  return null;
+}
+
+async function send(text){
+  text = (text || '').trim();
+  if (!text) return;
+  add('you', 'VOCÊ', text);
+  var c = localCommand(text);
+  if (c){
+    await publish({t: 'cmd', cmd: c.id, q: text, a: c.reply, app: c.app});
+    add('', 'JARVIS', c.reply); say(c.reply);
+    return;
+  }
+  if (!WORKER_URL){ add('err', 'AVISO', 'A IA ainda não foi configurada (falta o WORKER_URL neste arquivo).'); return; }
+  if (!token){ $('setup').style.display = 'block'; add('err', 'AVISO', 'Falta a senha. Digite acima e envie de novo.'); return; }
+  setState('PROCESSANDO...');
+  publish({t: 'state', s: 'thinking'});
+  convo.push({role: 'user', content: text});
+  try {
+    var r = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: {'content-type': 'application/json', 'x-token': token},
+      body: JSON.stringify({messages: convo.slice(-12), now: new Date().toLocaleString('pt-BR')})
+    });
+    if (r.status === 401){ convo.pop(); $('setup').style.display = 'block'; throw new Error('Senha incorreta.'); }
+    var j = await r.json();
+    if (!j.reply) throw new Error(j.error || 'Sem resposta da IA.');
+    convo.push({role: 'assistant', content: j.reply});
+    await publish({t: 'chat', q: text, a: j.reply});
+    add('', 'JARVIS', j.reply); say(j.reply);
+  } catch (e) {
+    publish({t: 'state', s: 'idle'});
+    add('err', 'ERRO', e.message || String(e));
+  }
+  setState('PRONTO');
+}
+
+$('send').onclick = function(){ var v = $('txt').value; $('txt').value = ''; send(v); };
+$('txt').onkeydown = function(e){ if (e.key === 'Enter') $('send').onclick(); };
+$('savetok').onclick = function(){ token = $('tok').value.trim(); localStorage.setItem('jarvis_token', token); $('tok').value = ''; $('setup').style.display = 'none'; };
+$('reset').onclick = function(){ localStorage.removeItem('jarvis_token'); token = ''; $('setup').style.display = 'block'; };
+if (!token && WORKER_URL) $('setup').style.display = 'block';
+
+/* ===== microfone ===== */
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, listening = false, got = false;
+if (!SR){ $('mic').textContent = 'SEM MIC'; $('mic').disabled = true; }
+$('mic').onclick = function(){
+  if (listening){ rec.stop(); return; }
+  rec = new SR();
+  rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = false;
+  got = false;
+  rec.onstart = function(){ listening = true; $('mic').className = 'on'; $('mic').textContent = 'OUVINDO'; setState('OUVINDO...'); publish({t: 'state', s: 'listening'}); };
+  rec.onresult = function(e){
+    var t = '', fin = false;
+    for (var i = e.resultIndex; i < e.results.length; i++){ t += e.results[i][0].transcript; if (e.results[i].isFinal) fin = true; }
+    $('state').textContent = t;
+    if (fin){ got = true; send(t); }
+  };
+  rec.onerror = function(){ setState('NÃO ENTENDI'); };
+  rec.onend = function(){
+    listening = false; $('mic').className = ''; $('mic').textContent = 'FALAR';
+    if (!got){ publish({t: 'state', s: 'idle'}); setState('PRONTO'); }
+  };
+  try { rec.start(); } catch (e) {}
+};
+</script>
+</body>
+</html>
