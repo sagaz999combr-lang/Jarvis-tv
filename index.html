@@ -750,8 +750,25 @@ function pollRelay(){
   x.ontimeout = function(){ inflight = false; aiOk = false; setSt('st-ai', false); };
   x.send();
 }
+function connectRelay(){
+  try {
+    var es = new EventSource('https://ntfy.sh/' + CONFIG.topic + '/sse');
+    es.onopen = function(){ aiOk = true; setSt('st-ai', true); };
+    es.onmessage = function(e){
+      var m;
+      try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (m.event === 'message') handleRelay(m.message);
+    };
+    es.onerror = function(){
+      aiOk = false; setSt('st-ai', false);
+      if (es.readyState === 2){ setTimeout(connectRelay, 15000); }
+    };
+  } catch (err) {
+    setInterval(pollRelay, 10000); pollRelay();
+  }
+}
 if (CONFIG.topic){
-  setInterval(pollRelay, 3000); pollRelay();
+  connectRelay();
 } else {
   $('st-ai').textContent = 'NÃO CONFIGURADO'; $('st-ai').style.color = '#ffb84d';
   $('ca').textContent = 'IA AINDA NÃO CONFIGURADA. QUANDO ESTIVER PRONTA, FALE PELO CELULAR E EU RESPONDO AQUI.';

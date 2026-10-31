@@ -62,7 +62,7 @@ function add(kind, who, text){
 }
 function publish(obj){
   if (!TOPIC) return Promise.resolve();
-  return fetch('https://ntfy.sh/' + TOPIC, {method: 'POST', body: JSON.stringify(obj)}).catch(function(){});
+  return fetch('https://ntfy.sh/' + TOPIC, {method: 'POST', body: JSON.stringify(obj)}).then(function(r){ return r.ok; }).catch(function(){ return false; });
 }
 function say(t){
   if (!$('tts').checked || !window.speechSynthesis) return;
@@ -115,7 +115,8 @@ async function send(text){
     var j = await r.json();
     if (!j.reply) throw new Error(j.error || 'Sem resposta da IA.');
     convo.push({role: 'assistant', content: j.reply});
-    await publish({t: 'chat', q: text, a: j.reply});
+    var sent = await publish({t: 'chat', q: text, a: j.reply});
+    if (sent === false) add('err', 'AVISO', 'A resposta chegou aqui, mas não consegui enviar para a TV.');
     add('', 'JARVIS', j.reply); say(j.reply);
   } catch (e) {
     publish({t: 'state', s: 'idle'});
@@ -133,6 +134,7 @@ $('savetok').onclick = function(){
 };
 $('reset').onclick = function(){ localStorage.removeItem('jarvis_token'); localStorage.removeItem('jarvis_worker'); token = ''; worker = ''; $('setup').style.display = 'block'; };
 $('wurl').value = worker;
+if (worker){ fetch(worker).then(function(r){ return r.text(); }).then(function(t){ setState(t.indexOf('JARVIS') >= 0 ? 'WORKER OK' : 'WORKER ESTRANHO'); }).catch(function(){ setState('WORKER FALHOU'); }); }
 if (!token || !worker) $('setup').style.display = 'block';
 
 /* ===== microfone ===== */
