@@ -120,7 +120,7 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 .on{opacity:1}
 #greet{font-size:4.6rem;letter-spacing:.6rem;color:#e6ffff;text-shadow:0 0 30px #00bfff,0 0 60px #0090d0;opacity:0;-webkit-transition:opacity 1.2s;transition:opacity 1.2s;margin-top:1.5rem}
 .hint{font-size:.6rem;color:#3f9fbf;letter-spacing:.15rem;margin-right:1rem}
-.abtn{font-size:.7rem;border:1px solid #2fe3ff;padding:.2rem .7rem;margin-right:1rem;color:#7df6ff;letter-spacing:.2rem}
+.abtn{font-size:.85rem;border:1px solid #2fe3ff;padding:.3rem 1rem;margin-right:1rem;color:#7df6ff;letter-spacing:.2rem;background:rgba(10,70,100,.5)}
 #apps{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,7,17,.94);z-index:90;display:none;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
 #apps.show{display:-webkit-flex;display:flex}
 .aph{font-size:1.2rem;letter-spacing:.5rem;color:#7df6ff;margin-bottom:2rem}
@@ -128,6 +128,19 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 .at{display:inline-block;width:14rem;height:6rem;line-height:6rem;margin:.7rem;border:1px solid rgba(34,190,255,.4);background:rgba(3,20,36,.8);font-size:1.1rem;letter-spacing:.2rem;color:#bcefff}
 .at.sel{border-color:#7df6ff;background:rgba(10,70,100,.8);box-shadow:0 0 25px #00aaff;color:#fff}
 .ahint{margin-top:2rem;font-size:.7rem;letter-spacing:.2rem;color:#3f9fbf}
+.rp{top:20%;left:20%;right:20%;bottom:20%;border:1px solid rgba(80,230,255,.6);opacity:0;-webkit-animation:ripple 5s ease-out infinite;animation:ripple 5s ease-out infinite}
+.rp2{-webkit-animation-delay:2.5s;animation-delay:2.5s}
+@-webkit-keyframes ripple{0%{-webkit-transform:scale(.7);opacity:.55}100%{-webkit-transform:scale(1.45);opacity:0}}
+@keyframes ripple{0%{transform:scale(.7);opacity:.55}100%{transform:scale(1.45);opacity:0}}
+.core>.sq{top:19%;left:19%;right:19%;bottom:19%;border:1px solid rgba(80,230,255,.45);border-radius:0;-webkit-animation:spinsq 22s linear infinite;animation:spinsq 22s linear infinite}
+.core>.sq2{top:24%;left:24%;right:24%;bottom:24%;border:1px dashed rgba(80,230,255,.55);-webkit-animation:spinsq 14s linear infinite reverse;animation:spinsq 14s linear infinite reverse}
+@-webkit-keyframes spinsq{from{-webkit-transform:rotate(45deg)}to{-webkit-transform:rotate(405deg)}}
+@keyframes spinsq{from{transform:rotate(45deg)}to{transform:rotate(405deg)}}
+.rl{position:absolute;top:13%;bottom:11%;width:.6rem;background:repeating-linear-gradient(0deg,rgba(80,230,255,.4) 0,rgba(80,230,255,.4) 1px,transparent 1px,transparent 12px)}
+.rl1{left:1.6%}.rl2{right:1.6%}
+.top:after{content:"";position:absolute;left:0;bottom:-1px;width:12%;height:2px;background:linear-gradient(90deg,rgba(125,246,255,0),#7df6ff,rgba(125,246,255,0));-webkit-animation:slide 6s linear infinite;animation:slide 6s linear infinite}
+@-webkit-keyframes slide{from{-webkit-transform:translateX(0)}to{-webkit-transform:translateX(830%)}}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(830%)}}
 </style>
 </head>
 <body>
@@ -135,9 +148,10 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 <div id="beam"></div>
 <div id="vig"></div>
 <div id="scan"></div>
+<div class="rl rl1"></div><div class="rl rl2"></div>
 <div class="cn c1"></div><div class="cn c2"></div><div class="cn c3"></div><div class="cn c4"></div>
 
-<div class="top"><div class="ttl">J.A.R.V.I.S <span class="small">// SISTEMA DE ASSISTÊNCIA</span></div><div class="status"><span class="hint">BOTÃO AMARELO = APPS</span><span id="appsbtn" class="abtn">APPS</span><span class="dot"></span>ONLINE</div></div>
+<div class="top"><div class="ttl">J.A.R.V.I.S <span class="small">// SISTEMA DE ASSISTÊNCIA</span></div><div class="status"><span class="hint">TECLA 1 = APPS  //  TECLA 2 = MÚSICA</span><span id="appsbtn" class="abtn">APPS</span><span id="musbtn" class="abtn">MÚSICA</span><span class="dot"></span>ONLINE</div></div>
 
 <div class="col cl">
   <div class="panel">
@@ -174,6 +188,8 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
 <div class="core" id="core">
   <div class="ticks" id="ticks"></div>
   <div class="ring"></div>
+  <div class="rp"></div><div class="rp rp2"></div>
+  <div class="sq"></div><div class="sq sq2"></div>
   <div class="r5"></div>
   <div class="r2"></div>
   <div class="a1"></div>
@@ -193,6 +209,8 @@ body{background:radial-gradient(ellipse at 50% 44%,#08233a 0%,#04111f 35%,#02071
   <div class="panel">
     <div class="ph"><span>STATUS DO SISTEMA</span><i></i></div>
     <div class="kv"><span>ÁUDIO</span><b id="st-audio">--</b></div>
+    <div class="kv"><span>VOZ</span><b id="st-voice">--</b></div>
+    <div class="kv"><span>ÚLTIMA TECLA</span><b id="st-key">--</b></div>
     <div class="kv"><span>IA / CELULAR</span><b id="st-ai">--</b></div>
     <div class="kv"><span>CLIMA</span><b id="st-wx">--</b></div>
     <div class="kv"><span>FINANÇAS</span><b id="st-fx">--</b></div>
@@ -241,12 +259,13 @@ var CONFIG = {
   lat: -28.24,
   lon: -48.67,
   tzOffsetMin: -180,           // horario de Brasilia (UTC-3)
+  appsKeys: [49, 97],          // teclas que abrem os apps: 1 do controle (49) e 1 do teclado numerico (97). Os botoes coloridos sao do navegador da TV
   briefing: true,              // apos a saudacao, fala o clima e o dolar
   greeting: 'auto',            // 'auto' = bom dia/boa tarde/boa noite; ou um texto fixo, ex: 'BOM DIA, SENHOR'
   music: 'back_in_black.mp3.mp3',  // arquivo de audio na mesma pasta do HTML
   volume: 0.6,
   voice: true,                 // JARVIS fala as respostas e a saudacao pela TV
-  topic: '',                   // nome secreto do canal com o celular (vamos preencher no passo da IA)
+  topic: 'jarvis-bd3070517b59553a',                   // nome secreto do canal com o celular (vamos preencher no passo da IA)
   feeds: [
     {name: 'G1 MUNDO', url: 'https://g1.globo.com/rss/g1/mundo/'},
     {name: 'BBC BRASIL', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml'}
@@ -277,7 +296,7 @@ function fmt(n, dec){
   s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return s.join(',');
 }
-function stamp(){ var d = new Date(); $('st-upd').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function stamp(){ var d = nowBR(); $('st-upd').textContent = pad(d.h) + ':' + pad(d.m); }
 function setSt(id, ok){ $(id).textContent = ok ? 'OK' : 'SEM SINAL'; $(id).style.color = ok ? '#3dffb0' : '#ff5a6e'; }
 
 /* ===== marcas do anel ===== */
@@ -376,7 +395,7 @@ function loadFinance(){
 }
 
 /* ===== noticias (RSS via rss2json) ===== */
-var feedItems = [], pool = [], newsIdx = 0, PAGE = 5;
+var feedItems = [], pool = [], newsIdx = 0, PAGE = 4;
 function clean(s){ return String(s).replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/&#8211;/g,'-'); }
 function rebuildPool(){
   pool = [];
@@ -437,30 +456,49 @@ function parseRss(xml, name){
 }
 var PROXIES = [
   function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
-  function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
+  function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); },
+  function(u){ return 'https://corsproxy.io/?' + encodeURIComponent(u); }
 ];
 function fetchFeed(fd, cb){
-  function viaProxy(i){
-    if (i >= PROXIES.length){ cb([]); return; }
-    getText(PROXIES[i](fd.url), function(t){
-      var a = parseRss(t, fd.name);
-      if (a.length) cb(a); else viaProxy(i + 1);
-    }, function(){ viaProxy(i + 1); });
+  var finished = false, pending = 1 + PROXIES.length;
+  function got(arr){
+    if (finished) return;
+    if (arr && arr.length){ finished = true; cb(arr); return; }
+    pending--;
+    if (pending <= 0){ finished = true; cb([]); }
   }
   getJSON('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(fd.url), function(j){
     var arr = [];
     if (j && j.items){
       for (var i = 0; i < j.items.length && i < 10; i++){ arr.push({src: fd.name, title: clean(j.items[i].title)}); }
     }
-    if (arr.length) cb(arr); else viaProxy(0);
-  }, function(){ viaProxy(0); });
+    got(arr);
+  }, function(){ got([]); });
+  for (var p = 0; p < PROXIES.length; p++){
+    (function(i){
+      getText(PROXIES[i](fd.url), function(t){ got(parseRss(t, fd.name)); }, function(){ got([]); });
+    })(p);
+  }
 }
-function loadNews(){
+function loadNewsExternal(){
   for (var n = 0; n < CONFIG.feeds.length; n++){
     (function(idx){
       fetchFeed(CONFIG.feeds[idx], function(arr){ feedItems[idx] = arr; finishNews(); });
     })(n);
   }
+}
+function loadNews(){
+  $('st-nw').textContent = 'CARREGANDO'; $('st-nw').style.color = '#ffb84d';
+  getJSON('news.json?t=' + new Date().getTime(), function(j){
+    if (j && j.items && j.items.length){
+      for (var f = 0; f < CONFIG.feeds.length; f++){
+        var arr = [];
+        for (var i = 0; i < j.items.length; i++){ if (j.items[i].src === CONFIG.feeds[f].name) arr.push({src: j.items[i].src, title: clean(j.items[i].title)}); }
+        feedItems[f] = arr;
+      }
+      finishNews();
+    } else { loadNewsExternal(); }
+  }, loadNewsExternal);
 }
 var newsShown = false;
 function finishNews(){
@@ -486,7 +524,6 @@ function startMusic(){
   if (p && p.catch){ p.catch(function(){ setAudio('PRESSIONE OK', false); }); }
 }
 function toggleMusic(e){
-  if (e && e.type === 'keydown' && e.keyCode !== 13) return;
   if (!musicWanted) return;
   if (audio.paused){ try { audio.play(); } catch (x) {} } else { audio.pause(); }
 }
@@ -518,13 +555,15 @@ function finishVoice(){
   if (vdone){ var d = vdone; vdone = null; d(); }
 }
 function playNext(){
-  if (!vq.length){ finishVoice(); return; }
+  if (!vq.length){ setVoice('OK'); finishVoice(); return; }
   duck();
   voice.src = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=' + encodeURIComponent(vq.shift());
   try { voice.play(); } catch (e) { finishVoice(); }
 }
+function setVoice(t){ var e = $('st-voice'); e.textContent = t; e.style.color = (t === 'FALHOU') ? '#ff5a6e' : '#3dffb0'; }
+voice.addEventListener('playing', function(){ setVoice('FALANDO'); });
 voice.addEventListener('ended', playNext);
-voice.addEventListener('error', function(){ fallbackSpeak(); });
+voice.addEventListener('error', function(){ setVoice('FALHOU'); fallbackSpeak(); });
 var lastSpoken = '';
 function fallbackSpeak(){
   var t = lastSpoken;
@@ -647,14 +686,16 @@ function appsKey(k){
   else if (k === 461 || k === 27 || k === 8){ hideApps(); return; }
   renderApps();
 }
+function inList(v, arr){ for (var i = 0; i < arr.length; i++){ if (arr[i] === v) return true; } return false; }
 function inApps(el){ while (el){ if (el.id === 'apps' || el.id === 'appsbtn') return true; el = el.parentNode; } return false; }
 document.addEventListener('keydown', function(e){
   var k = e.keyCode;
+  $('st-key').textContent = k;
   if (appsOpen){ appsKey(k); e.preventDefault(); return; }
-  if (k === 405){ showApps(); return; }
-  toggleMusic(e);
+  if (inList(k, CONFIG.appsKeys)){ showApps(); e.preventDefault(); return; }
+  if (k === 50 || k === 98 || k === 415 || k === 19 || k === 179){ toggleMusic(null); }
 });
-document.addEventListener('click', function(e){ if (inApps(e.target)) return; toggleMusic(e); });
+$('musbtn').onclick = function(){ toggleMusic(null); };
 
 function handleRelay(raw){
   var o;
