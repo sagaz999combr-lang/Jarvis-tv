@@ -264,6 +264,7 @@ var CONFIG = {
   greeting: 'auto',            // 'auto' = bom dia/boa tarde/boa noite; ou um texto fixo, ex: 'BOM DIA, SENHOR'
   music: 'back_in_black.mp3.mp3',  // arquivo de audio na mesma pasta do HTML
   volume: 0.6,
+  ttsUrl: '',                  // endereco da voz no Worker, ex: https://jarvis.seunome.workers.dev/tts
   voice: true,                 // JARVIS fala as respostas e a saudacao pela TV
   topic: 'jarvis-bd3070517b59553a',                   // nome secreto do canal com o celular (vamos preencher no passo da IA)
   feeds: [
@@ -557,7 +558,7 @@ function finishVoice(){
 function playNext(){
   if (!vq.length){ setVoice('OK'); finishVoice(); return; }
   duck();
-  voice.src = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=' + encodeURIComponent(vq.shift());
+  voice.src = (CONFIG.ttsUrl ? CONFIG.ttsUrl + '?q=' : 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=') + encodeURIComponent(vq.shift());
   try { voice.play(); } catch (e) { finishVoice(); }
 }
 function setVoice(t){ var e = $('st-voice'); e.textContent = t; e.style.color = (t === 'FALHOU') ? '#ff5a6e' : '#3dffb0'; }
