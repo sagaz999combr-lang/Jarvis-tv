@@ -10,6 +10,8 @@ html,body{margin:0;height:100%;background:#020711;color:#bcefff;font-family:-app
 body{background:radial-gradient(ellipse at 50% 30%,#08233a 0%,#04111f 40%,#020711 80%);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
 h1{font-size:15px;letter-spacing:6px;text-align:center;margin:18px 0 4px;color:#e6ffff;text-shadow:0 0 14px #00bfff}
 #state{text-align:center;font-size:11px;letter-spacing:3px;color:#55dfff;height:16px}
+#diag{text-align:center;font-size:12px;line-height:1.7;margin-top:6px;letter-spacing:1px}
+.okc{color:#3dffb0}.badc{color:#ff7a8a}
 #log{flex:1;overflow-y:auto;margin:14px 0;padding:4px}
 .m{margin:10px 0;padding:10px 12px;border:1px solid rgba(34,190,255,.3);background:rgba(3,20,36,.6);font-size:15px;line-height:1.4}
 .m small{display:block;font-size:10px;letter-spacing:3px;color:#2fa6c8;margin-bottom:4px}
@@ -28,7 +30,8 @@ button.s{background:#0b4c70;color:#e6ffff;border:1px solid #2fe3ff;padding:0 16p
 </head>
 <body>
 <h1>J.A.R.V.I.S</h1>
-<div id="state">PRONTO</div>
+<div id="state">VERIFICANDO...</div>
+<div id="diag"><div id="d-worker">IA (WORKER): verificando...</div><div id="d-canal">CANAL COM A TV: verificando...</div></div>
 <div id="log"></div>
 
 <div id="setup">
@@ -39,7 +42,7 @@ button.s{background:#0b4c70;color:#e6ffff;border:1px solid #2fe3ff;padding:0 16p
 
 <button id="mic">FALAR</button>
 <div class="row"><input type="text" id="txt" placeholder="ou digite aqui..."><button class="s" id="send">ENVIAR</button></div>
-<div class="opts"><label><input type="checkbox" id="tts" checked> voz do celular</label><a id="reset">refazer configuração</a></div>
+<div class="opts"><label><input type="checkbox" id="tts"> voz do celular</label><a id="reset">refazer configuração</a></div>
 
 <script>
 /* ===== CONFIGURACAO ===== */
@@ -134,7 +137,19 @@ $('savetok').onclick = function(){
 };
 $('reset').onclick = function(){ localStorage.removeItem('jarvis_token'); localStorage.removeItem('jarvis_worker'); token = ''; worker = ''; $('setup').style.display = 'block'; };
 $('wurl').value = worker;
-if (worker){ fetch(worker).then(function(r){ return r.text(); }).then(function(t){ setState(t.indexOf('JARVIS') >= 0 ? 'WORKER OK' : 'WORKER ESTRANHO'); }).catch(function(){ setState('WORKER FALHOU'); }); }
+var wok = false, cok = false;
+function mark(id, ok, txt){ var e = $(id); e.textContent = txt; e.className = ok ? 'okc' : 'badc'; }
+function ready(){ if (wok && cok){ $('state').textContent = 'PRONTO PARA FALAR'; } else { $('state').textContent = 'VERIFIQUE OS AVISOS'; } }
+if (worker){
+  fetch(worker).then(function(r){ return r.text().then(function(t){
+    wok = (r.ok && t.indexOf('JARVIS') >= 0);
+    mark('d-worker', wok, wok ? 'IA (WORKER): OK' : 'IA (WORKER): resposta estranha (' + r.status + ')'); ready();
+  }); }).catch(function(){ mark('d-worker', false, 'IA (WORKER): FALHOU (sem conexão ou bloqueado)'); ready(); });
+} else { mark('d-worker', false, 'IA (WORKER): falta o endereço, preencha acima'); ready(); }
+fetch('https://ntfy.sh/v1/health').then(function(r){ return r.json(); }).then(function(j){
+  cok = !!(j && j.healthy);
+  mark('d-canal', cok, cok ? 'CANAL COM A TV: OK' : 'CANAL COM A TV: instável'); ready();
+}).catch(function(){ mark('d-canal', false, 'CANAL COM A TV: FALHOU'); ready(); });
 if (!token || !worker) $('setup').style.display = 'block';
 
 /* ===== microfone ===== */

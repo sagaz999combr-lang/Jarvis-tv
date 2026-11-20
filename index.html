@@ -538,7 +538,7 @@ function greetingText(){
   if (h >= 12 && h < 18) return 'BOA TARDE, SENHOR';
   return 'BOA NOITE, SENHOR';
 }
-var voice = $('voice'), vq = [], vdone = null, savedVol = null;
+var voice = $('voice'), vq = [], vdone = null, savedVol = null, speaking = false, vtimer = null;
 function duck(){ try { if (!audio.paused && savedVol === null){ savedVol = audio.volume; audio.volume = Math.min(savedVol, 0.15); } } catch (e) {} }
 function unduck(){ try { if (savedVol !== null){ audio.volume = savedVol; savedVol = null; } } catch (e) {} }
 function chunkText(text){
@@ -552,14 +552,16 @@ function chunkText(text){
   return out;
 }
 function finishVoice(){
-  vq = []; unduck();
+  vq = []; unduck(); speaking = false; clearTimeout(vtimer);
   if (vdone){ var d = vdone; vdone = null; d(); }
 }
 function playNext(){
   if (!vq.length){ setVoice('OK'); finishVoice(); return; }
-  duck();
+  duck(); speaking = true;
   voice.src = (CONFIG.ttsUrl ? CONFIG.ttsUrl + '?q=' : 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=') + encodeURIComponent(vq.shift());
-  try { voice.play(); } catch (e) { finishVoice(); }
+  try { voice.play(); } catch (e) { finishVoice(); return; }
+  clearTimeout(vtimer);
+  vtimer = setTimeout(function(){ setVoice('FALHOU'); fallbackSpeak(); }, 25000);
 }
 function setVoice(t){ var e = $('st-voice'); e.textContent = t; e.style.color = (t === 'FALHOU') ? '#ff5a6e' : '#3dffb0'; }
 voice.addEventListener('playing', function(){ setVoice('FALANDO'); });
@@ -589,7 +591,8 @@ $('greet').textContent = gt;
 show('b1', 300); show('b2', 1100); show('b3', 1900);
 var musicKicked = false;
 function kickMusic(){ if (musicKicked) return; musicKicked = true; startMusic(); }
-setTimeout(function(){ $('greet').style.opacity = 1; if (CONFIG.voice){ speak(gt, function(){ if (CONFIG.briefing && lastWx){ speak(briefingText(), kickMusic); } else { kickMusic(); } }); setTimeout(kickMusic, 18000); } else { kickMusic(); } }, 2900);
+function safeKick(){ if (musicKicked) return; if (speaking){ setTimeout(safeKick, 3000); return; } kickMusic(); }
+setTimeout(function(){ $('greet').style.opacity = 1; if (CONFIG.voice){ speak(gt, function(){ if (CONFIG.briefing && lastWx){ speak(briefingText(), kickMusic); } else { kickMusic(); } }); setTimeout(safeKick, 20000); } else { kickMusic(); } }, 2900);
 setTimeout(function(){ $('boot').style.opacity = 0; }, 7500);
 setTimeout(function(){ $('boot').style.display = 'none'; }, 8700);
 
